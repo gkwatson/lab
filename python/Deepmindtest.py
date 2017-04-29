@@ -4,10 +4,11 @@ import pprint
 import tensorflow as tf
 
 # Construct and start the environment
-env = deepmind_lab.Lab('seekavoid_arena_01', ['RGB_INTERLACED'], config={
+env = deepmind_lab.Lab('random_maze', ['RGB_INTERLACED'], config={
 	'fps': str(60),
 	'width': str(360),
 	'height': str(240)})
+
 env.reset()
 
 # Create action dictionary
@@ -52,29 +53,10 @@ rgb_i = obs['RGB_INTERLACED']
 
 print type(rgb_i)
 
+arrayOfState = np.reshape(rgb_i, (-1))
+arrayOfState = arrayOfState / float(arrayOfState.size)
+
 #Tensorflow stuff
-
-def turnRGBIIntoNPArray(rgbi):
-    list4tf = []
-    for width in rgbi:
-        for colors in width:
-            for color in colors:
-                #And normalize
-                list4tf.append(float(color)/rgbi.size)
-    return np.array([list4tf])
-
-arrayOfState = turnRGBIIntoNPArray(rgb_i)
-
-#lstm = tf.contrib.rnn.BasicLSTMCell(128)
-## Initial state of the LSTM memory.
-#print [len(list4tf), lstm.state_size]
-#state = tf.zeros(lstm.state_size)
-#print state
-#probabilities = []
-#loss = 0.0
-
-## The value of state is updated after processing each batch of words.
-#output, state = lstm(list4tf, state)
 
 
 #These lines establish the feed-forward part of the network used to choose actions
@@ -105,13 +87,14 @@ with tf.Session() as sess:
         #Reset environment and get first new observation
         env.reset()
 	obs = env.observations()
-        s = turnRGBIIntoNPArray(obs['RGB_INTERLACED'])
+        s = np.reshape(obs['RGB_INTERLACED'], (1, -1))
+        s = s / float(s.size)
  
         rAll = 0
         d = False
         j = 0
         #The Q-Network
-        while j < 100:
+        while j < 1000:
             print "Step: " + str(j)
             j+=1
             #Choose an action (with e chance of random action) from the Q-network
@@ -137,7 +120,8 @@ with tf.Session() as sess:
             r = env.step(action_list[a[0]], num_steps = 10)
             obs = env.observations()
             d = env.is_running()
-            s1 = turnRGBIIntoNPArray(obs['RGB_INTERLACED'])
+            s1 = np.reshape(obs['RGB_INTERLACED'], (1, -1))
+            s1 = s1 / float(s1.size)
 
             #Obtain the Q' values by feeding the new state through our network
             Q1 = sess.run(Qout,feed_dict={inputs1:s1})
