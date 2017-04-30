@@ -23,16 +23,19 @@ def normalized_columns_initializer(std=1.0):
         return tf.constant(out)
     return _initializer
 
+#in case we want to sample a bigger screen
+def rebin84x84(arr)
+    return arr.reshape((84, arr.shape[0]//84, 84, -1, 3)).mean(axis=3).mean(1)
+
 
 
 # Construct and start the environment
-width = 360
-height = 240
+width = 84
+height = 84
 
 env = deepmind_lab.Lab('nav_maze_static_01', ['RGB_INTERLACED'], config={
-	'fps': str(60),
-	'width': str(360),
-	'height': str(240)})
+	'width': str(width),
+	'height': str(height)})
 
 env.reset()
 
@@ -67,7 +70,6 @@ action_list = [
 
 #array of zeroes same size as screen * colors
 arrayOfState = np.zeros(height * width * 3)
-
 
 
 
@@ -184,7 +186,11 @@ with tf.Session() as sess:
             a = np.random.choice(a_dist[0], p = a_dist[0])
             a = np.argmax(a_dist == a)
 
-            r = env.step(action_list[a], num_steps = 10)
+            r = env.step(action_list[a], num_steps = 1)
+
+            #print "Move distribution: " + str(a_dist)
+            #print "Move chosen: " + str(action_list[a])
+
             d = env.is_running()
 
             if d:

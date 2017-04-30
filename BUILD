@@ -1046,6 +1046,13 @@ py_binary(
     main = "python/GavinA3Ctest.py",
 )
 
+py_binary(
+    name = "A3CEx",
+    srcs = ["python/A3CEx.py"],
+    data = [":deepmind_lab.so"],
+    main = "python/A3CEx.py",
+)
+
 py_test(
     name = "random_agent_test",
     srcs = ["python/random_agent_test.py"],
