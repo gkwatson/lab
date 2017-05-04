@@ -16,19 +16,20 @@ width = 84
 height = 84
 
 # Create action dictionary
-ACTIONS = {
-  'look_left': np.array((-20, 0, 0, 0, 0, 0, 0), dtype=np.intc),
-  'look_right': np.array((20, 0, 0, 0, 0, 0, 0), dtype=np.intc),
-  'look_up': np.array((0, 10, 0, 0, 0, 0, 0), dtype=np.intc),
-  'look_down': np.array((0, -10, 0, 0, 0, 0, 0), dtype=np.intc),
-  'strafe_left': np.array((0, 0, -1, 0, 0, 0, 0), dtype=np.intc),
-  'strafe_right': np.array((0, 0, 1, 0, 0, 0, 0), dtype=np.intc),
-  'forward': np.array((0, 0, 0, 1, 0, 0, 0), dtype=np.intc),
-  'backward': np.array((0, 0, 0, -1, 0, 0, 0), dtype=np.intc),
-  'fire': np.array((0, 0, 0, 0, 1, 0, 0), dtype=np.intc),
-  'jump': np.array((0, 0, 0, 0, 0, 1, 0), dtype=np.intc),
-  'crouch': np.array((0, 0, 0, 0, 0, 0, 1), dtype=np.intc)
-}
+# Allen: Not being used / just for reference
+# ACTIONS = {
+#   'look_left': np.array((-20, 0, 0, 0, 0, 0, 0), dtype=np.intc),
+#   'look_right': np.array((20, 0, 0, 0, 0, 0, 0), dtype=np.intc),
+#   'look_up': np.array((0, 10, 0, 0, 0, 0, 0), dtype=np.intc),
+#   'look_down': np.array((0, -10, 0, 0, 0, 0, 0), dtype=np.intc),
+#   'strafe_left': np.array((0, 0, -1, 0, 0, 0, 0), dtype=np.intc),
+#   'strafe_right': np.array((0, 0, 1, 0, 0, 0, 0), dtype=np.intc),
+#   'forward': np.array((0, 0, 0, 1, 0, 0, 0), dtype=np.intc),
+#   'backward': np.array((0, 0, 0, -1, 0, 0, 0), dtype=np.intc),
+#   'fire': np.array((0, 0, 0, 0, 1, 0, 0), dtype=np.intc),
+#   'jump': np.array((0, 0, 0, 0, 0, 1, 0), dtype=np.intc),
+#   'crouch': np.array((0, 0, 0, 0, 0, 0, 1), dtype=np.intc)
+# }
 
 action_list = [
   np.array((-20, 0, 0, 0, 0, 0, 0), dtype=np.intc),
@@ -45,10 +46,8 @@ action_list = [
 ]
 
 #array of zeroes same size as screen * colors
+# Allen: Probably not being used
 arrayOfState = np.zeros(height * width * 3)
-
-
-
 
 
 #Tensorflow stuff
@@ -64,18 +63,19 @@ def update_target_graph(from_scope,to_scope):
         op_holder.append(to_var.assign(from_var))
     return op_holder
 
-# Processes Doom screen image to produce cropped and resized image. 
-def process_frame(frame):
-    s = frame[10:-10,30:-30]
-    s = scipy.misc.imresize(s,[84,84])
-    s = np.reshape(s,[np.prod(s.shape)]) / 255.0
-    return s
+# Processes Doom screen image to produce cropped and resized image.
+# Allen: Not being used
+# def process_frame(frame):
+#     s = frame[10:-10,30:-30]
+#     s = scipy.misc.imresize(s,[84,84])
+#     s = np.reshape(s,[np.prod(s.shape)]) / 255.0
+#     return s
 
 # Discounting function used to calculate discounted returns.
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
-#Used to initialize weights for policy and value output layers
+# Used to initialize weights for policy and value output layers
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -88,53 +88,90 @@ def normalized_columns_initializer(std=1.0):
 
 class AC_Network():
     def __init__(self,s_size,a_size,scope,trainer):
+        """
+        s_size: state size
+        a_size: action size
+        scope:
+        trainer: A TF Optimzer instance
+        """
         with tf.variable_scope(scope):
+
             #Input and visual encoding layers
             self.inputs = tf.placeholder(shape=[None,s_size],dtype=tf.float32)
-            self.imageIn = tf.reshape(self.inputs,shape=[-1,84,84,3])
+
+
+            # reshape the frame data???
+            self.imageIn = tf.reshape(self.inputs, shape=[-1,84,84,3])
+
+
+            # setup 1st convolutional layer
             self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
                 inputs=self.imageIn,num_outputs=16,
                 kernel_size=[8,8],stride=[4,4],padding='VALID')
+
+            # setup 2nd convolutional layer
             self.conv2 = slim.conv2d(activation_fn=tf.nn.elu,
                 inputs=self.conv1,num_outputs=32,
                 kernel_size=[4,4],stride=[2,2],padding='VALID')
+
+
+            # create a fully connected layer to get the flattened inputs from conv2
             hidden = slim.fully_connected(slim.flatten(self.conv2),256,activation_fn=tf.nn.elu)
-            
+
             #Recurrent network for temporal dependencies
-            lstm_cell = tf.contrib.rnn.BasicLSTMCell(256,state_is_tuple=True)
+            lstm_cell = tf.contrib.rnn.BasicLSTMCell(256, state_is_tuple=True)
+
             c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
             h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
             self.state_init = [c_init, h_init]
+
             c_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.c])
             h_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.h])
             self.state_in = (c_in, h_in)
+
+            # sets a batch size of 1
             rnn_in = tf.expand_dims(hidden, [0])
+
+            # this appears to get you the number of images...?
             step_size = tf.shape(self.imageIn)[:1]
+
+            # converts the inputs to tuples
             state_in = tf.contrib.rnn.LSTMStateTuple(c_in, h_in)
+
             lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
-                lstm_cell, rnn_in, initial_state=state_in, sequence_length=step_size,
+                lstm_cell,
+                rnn_in,
+                initial_state=state_in,
+                sequence_length=step_size,
                 time_major=False)
+
             lstm_c, lstm_h = lstm_state
+
+            # let's save this for the Worker class' use
             self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
+
             rnn_out = tf.reshape(lstm_outputs, [-1, 256])
-            
+
             #Output layers for policy and value estimations
             self.policy = slim.fully_connected(rnn_out,a_size,
                 activation_fn=tf.nn.softmax,
                 weights_initializer=normalized_columns_initializer(0.01),
                 biases_initializer=None)
+
             self.value = slim.fully_connected(rnn_out,1,
                 activation_fn=None,
                 weights_initializer=normalized_columns_initializer(1.0),
                 biases_initializer=None)
-            
+
             #Only the worker network need ops for loss functions and gradient updating.
             if scope != 'global':
                 self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
-                self.actions_onehot = tf.one_hot(self.actions,a_size,dtype=tf.float32)
+                self.actions_onehot = tf.one_hot(self.actions, a_size, dtype=tf.float32)
+                #
                 self.target_v = tf.placeholder(shape=[None],dtype=tf.float32)
+                #
                 self.advantages = tf.placeholder(shape=[None],dtype=tf.float32)
-
+                #
                 self.responsible_outputs = tf.reduce_sum(self.policy * self.actions_onehot, [1])
 
                 #Loss functions
@@ -146,152 +183,173 @@ class AC_Network():
                 #Get gradients from local network using local losses
                 local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
                 self.gradients = tf.gradients(self.loss,local_vars)
+
                 self.var_norms = tf.global_norm(local_vars)
-                grads,self.grad_norms = tf.clip_by_global_norm(self.gradients,40.0)
-                
+                grads, self.grad_norms = tf.clip_by_global_norm(self.gradients, 40.0)
+
                 #Apply local gradients to global network
                 global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'global')
                 self.apply_grads = trainer.apply_gradients(zip(grads,global_vars))
 
 
 
-
-
-
-
 class Worker():
     def __init__(self,name,s_size,a_size,trainer,model_path,global_episodes):
         self.name = "worker_" + str(name)
-        self.number = name        
+        self.number = name
         self.model_path = model_path
-        self.trainer = trainer
-        self.global_episodes = global_episodes
-        self.increment = self.global_episodes.assign_add(1)
-        self.episode_rewards = []
-        self.episode_lengths = []
-        self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter("train_"+str(self.number))
+        self.trainer = trainer                                                  # TF Optimzer
+        self.global_episodes = global_episodes                                  # Total allowed episodes shared by the threads
+        self.increment = self.global_episodes.assign_add(1)                     #
+        self.episode_rewards = []                                               #
+        self.episode_lengths = []                                               # 360 (pointless for us)
+        self.episode_mean_values = []                                           # mean of the episode values??
+        self.summary_writer = tf.summary.FileWriter("train_"+str(self.number))  #
 
-        #Create the local copy of the network and the tensorflow op to copy global paramters to local network
+        # Create the local copy of the network and the tensorflow op to copy global paramters to local network
         self.local_AC = AC_Network(s_size,a_size,self.name,trainer)
-        self.update_local_ops = update_target_graph('global',self.name)        
-        
+        self.update_local_ops = update_target_graph('global', self.name)
+
         #The Below code is related to setting up the environment
         self.actions = action_list
-        
-    def train(self,rollout,sess,gamma,bootstrap_value):
+
+    def train(self, rollout, sess, gamma, bootstrap_value):
         rollout = np.array(rollout)
         observations = rollout[:,0]
         actions = rollout[:,1]
         rewards = rollout[:,2]
         next_observations = rollout[:,3]
         values = rollout[:,5]
-        
-        # Here we take the rewards and values from the rollout, and use them to 
-        # generate the advantage and discounted returns. 
+
+        # Here we take the rewards and values from the rollout, and use them to
+        # generate the advantage and discounted returns.
         # The advantage function uses "Generalized Advantage Estimation"
         self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
         discounted_rewards = discount(self.rewards_plus,gamma)[:-1]
         self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
+
+        # current reward + discounted future value - ?
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
-        advantages = discount(advantages,gamma)
+
+        advantages = discount(advantages, gamma)
 
         # Update the global network using gradients from loss
         # Generate network statistics to periodically save
         rnn_state = self.local_AC.state_init
-        feed_dict = {self.local_AC.target_v:discounted_rewards,
-            self.local_AC.inputs:np.vstack(observations),
-            self.local_AC.actions:actions,
-            self.local_AC.advantages:advantages,
-            self.local_AC.state_in[0]:rnn_state[0],
-            self.local_AC.state_in[1]:rnn_state[1]}
-        v_l,p_l,e_l,g_n,v_n,_ = sess.run([self.local_AC.value_loss,
-            self.local_AC.policy_loss,
-            self.local_AC.entropy,
-            self.local_AC.grad_norms,
-            self.local_AC.var_norms,
-            self.local_AC.apply_grads],
+        feed_dict = {
+            self.local_AC.target_v:    discounted_rewards,
+            self.local_AC.inputs:      np.vstack(observations),
+            self.local_AC.actions:     actions,
+            self.local_AC.advantages:  advantages,
+            self.local_AC.state_in[0]: rnn_state[0],
+            self.local_AC.state_in[1]: rnn_state[1]
+        }
+
+        v_l,p_l,e_l,g_n,v_n,_ = sess.run([
+                self.local_AC.value_loss,
+                self.local_AC.policy_loss,
+                self.local_AC.entropy,
+                self.local_AC.grad_norms,
+                self.local_AC.var_norms,
+                self.local_AC.apply_grads
+            ],
             feed_dict=feed_dict)
-        return v_l / len(rollout),p_l / len(rollout),e_l / len(rollout), g_n,v_n
-        
+
+        return v_l / len(rollout), p_l / len(rollout), e_l / len(rollout), g_n,v_n
+
     def work(self,max_episode_length,gamma,sess,coord,saver):
         self.env = deepmind_lab.Lab('nav_maze_static_01', ['RGB_INTERLACED'], config={
-	'fps': str(60),
-	'width': str(width),
-	'height': str(height)})
+        	'fps': str(60),
+        	'width': str(width),
+        	'height': str(height)
+        })
         self.env.reset()
 
         episode_count = sess.run(self.global_episodes)
         total_steps = 0
+
         print ("Starting worker " + str(self.number))
-        with sess.as_default(), sess.graph.as_default():                 
+        with sess.as_default(), sess.graph.as_default():
             while not coord.should_stop():
+                # this will copy back the global graph
                 sess.run(self.update_local_ops)
+
                 episode_buffer = []
                 episode_values = []
                 episode_frames = []
                 episode_reward = 0
                 episode_step_count = 0
                 d = False
-                
+
                 self.env.reset()
 
                 obs = self.env.observations()
                 s = np.reshape(obs['RGB_INTERLACED'], (1, -1))
-                s = s / float(s.size) #Normalize observations
+                s = s / float(s.size)                                           # Normalize observations
                 episode_frames.append(s)
                 rnn_state = self.local_AC.state_init
-                
+
                 while self.env.is_running():
                     #Take an action using probabilities from policy network output.
-                    a_dist,v,rnn_state = sess.run([self.local_AC.policy,self.local_AC.value,self.local_AC.state_out], 
-                        feed_dict={self.local_AC.inputs:s,
-                        self.local_AC.state_in[0]:rnn_state[0],
-                        self.local_AC.state_in[1]:rnn_state[1]})
-                    a = np.random.choice(a_dist[0],p=a_dist[0])
+                    a_dist, v, rnn_state = sess.run(
+                        [self.local_AC.policy, self.local_AC.value, self.local_AC.state_out],
+                        feed_dict={
+                            self.local_AC.inputs:s,
+                            self.local_AC.state_in[0]:rnn_state[0],
+                            self.local_AC.state_in[1]:rnn_state[1]
+                        }
+                    )
+                    a = np.random.choice(a_dist[0], p=a_dist[0])
                     a = np.argmax(a_dist == a)
 
                     r = self.env.step(self.actions[a], num_steps = 1)
                     d = self.env.is_running()
                     if d:
                         obs = self.env.observations()
+                        # flatten the array
                         s1 = np.reshape(obs['RGB_INTERLACED'], (1, -1))
+
+
                         s1 = s1 / float(s1.size) #Normalize observations
 
                         episode_frames.append(s1)
                     else:
                         s1 = s
-                        
+
                     episode_buffer.append([s,a,r,s1,d,v[0,0]])
                     episode_values.append(v[0,0])
 
                     episode_reward += r
-                    s = s1                    
+                    s = s1
                     total_steps += 1
                     episode_step_count += 1
-                    
+
                     # If the episode hasn't ended, but the experience buffer is full, then we
                     # make an update step using that experience rollout.
                     if len(episode_buffer) == 30 and d and episode_step_count != max_episode_length - 1:
                         # Since we don't know what the true final return is, we "bootstrap" from our current
                         # value estimation.
-                        v1 = sess.run(self.local_AC.value, 
-                            feed_dict={self.local_AC.inputs:s,
-                            self.local_AC.state_in[0]:rnn_state[0],
-                            self.local_AC.state_in[1]:rnn_state[1]})[0,0]
-                        v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,v1)
+                        v1 = sess.run(
+                            self.local_AC.value,
+                            feed_dict={
+                                self.local_AC.inputs: s,
+                                self.local_AC.state_in[0]: rnn_state[0],
+                                self.local_AC.state_in[1]: rnn_state[1]
+                            })[0,0]
+
+                        v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer, sess, gamma, v1)
                         episode_buffer = []
                         sess.run(self.update_local_ops)
-                                            
+
                 self.episode_rewards.append(episode_reward)
                 self.episode_lengths.append(episode_step_count)
                 self.episode_mean_values.append(np.mean(episode_values))
-                
+
                 # Update the network using the experience buffer at the end of the episode.
                 if len(episode_buffer) != 0:
                     v_l,p_l,e_l,g_n,v_n = self.train(episode_buffer,sess,gamma,0.0)
-                                
-                    
+
+
                 # Periodically save gifs of episodes, model parameters, and summary statistics.
                 if episode_count % 5 == 0 and episode_count != 0:
                     if self.name == 'worker_0' and episode_count % 25 == 0:
@@ -338,16 +396,17 @@ tf.reset_default_graph()
 
 if not os.path.exists(model_path):
     os.makedirs(model_path)
-    
+
 #Create a directory to save episode playback gifs to
 if not os.path.exists('./frames'):
     os.makedirs('./frames')
 
-with tf.device("/cpu:0"): 
-    global_episodes = tf.Variable(0,dtype=tf.int32,name='global_episodes',trainable=False)
+with tf.device("/cpu:0"):
+    global_episodes = tf.Variable(0, dtype=tf.int32, name='global_episodes', trainable=False)
     trainer = tf.train.AdamOptimizer(learning_rate=1e-4)
     master_network = AC_Network(s_size,a_size,'global',None) # Generate global network
     num_workers = multiprocessing.cpu_count() #multiprocessing.cpu_count() # Set workers ot number of available CPU threads
+
     print "Starting " + str(num_workers) + " workers"
     workers = []
     # Create worker classes
@@ -363,7 +422,7 @@ with tf.Session() as sess:
         saver.restore(sess,ckpt.model_checkpoint_path)
     else:
         sess.run(tf.global_variables_initializer())
-        
+
     # This is where the asynchronous magic happens.
     # Start the "work" process for each worker in a separate threat.
     worker_threads = []
@@ -374,6 +433,3 @@ with tf.Session() as sess:
         sleep(0.5)
         worker_threads.append(t)
     coord.join(worker_threads)
-
-
-
