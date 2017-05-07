@@ -4,9 +4,9 @@ import tensorflow as tf
 import threading
 import multiprocessing
 import tensorflow.contrib.slim as slim
-#import scipy
+import scipy
 import os
-#from time import sleep
+from time import sleep
 
 # Create action dictionary
 ACTIONS = {
