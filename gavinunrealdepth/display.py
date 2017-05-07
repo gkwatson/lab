@@ -155,17 +155,29 @@ class Display(object):
     self.surface.blit(image, (8, 8))
     self.draw_center_text("input", 50, 100)
   
-  def show_depth_pred(self, depths):
+  def show_depth_pred(self, depth_preds):
     """
-    Show depth image
+    Show depth prediction image
+    """
+    depth_preds_ = (255.0 - depth_preds * 255.0).astype(np.uint8)
+    data = depth_preds_.reshape(84, 84, 1)
+    data_ = np.append(data, data, axis=2)
+    data_ = np.append(data_, data, axis=2)
+    image = pygame.image.frombuffer(data_, (84,84), 'RGB')
+    self.surface.blit(image, (8, 290))
+    self.draw_center_text("depth pred", 50, 384)
+  
+  def show_depth_truth(self, depths):
+    """
+    Show depth truth image
     """
     depths_ = (255.0 - depths * 255.0).astype(np.uint8)
     data = depths_.reshape(84, 84, 1)
     data_ = np.append(data, data, axis=2)
     data_ = np.append(data_, data, axis=2)
     image = pygame.image.frombuffer(data_, (84,84), 'RGB')
-    self.surface.blit(image, (8, 290))
-    self.draw_center_text("depth pred", 50, 384)
+    self.surface.blit(image, (100, 290))
+    self.draw_center_text("actual depth", 150, 384)
 
   def show_value(self):
     if self.value_history.is_empty:
@@ -275,7 +287,9 @@ class Display(object):
         self.show_reward_prediction(rp_c, reward)
 
     if USE_DEPTH_PREDICTION:
-      self.show_depth_pred(depths)
+      depth_preds = self.global_network.run_depth_pred(sess, state, last_action_reward)
+      self.show_depth_pred(depth_preds)
+      self.show_depth_truth(depths)
   
     self.state_history.add_state(state)
 
