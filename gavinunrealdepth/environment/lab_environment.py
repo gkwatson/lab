@@ -100,6 +100,8 @@ class LabEnvironment(environment.Environment):
     
   def _preprocess_frame(self, image_withd):
     depth_arr = image_withd[:,:,3:].reshape(-1)
+    depth_arr = depth_arr.astype(np.float32)
+    depth_arr = depth_arr / 255.0
     image = image_withd[:,:,:3]
     image = image.astype(np.float32)
     image = image / 255.0

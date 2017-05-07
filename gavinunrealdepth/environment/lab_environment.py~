@@ -87,7 +87,7 @@ class LabEnvironment(environment.Environment):
     self.conn.send([COMMAND_RESET, 0])
     obs = self.conn.recv()
     
-    self.last_state = self._preprocess_frame(obs)
+    self.last_state, self.last_depths = self._preprocess_frame(obs)
     self.last_action = 0
     self.last_reward = 0
 
@@ -98,11 +98,14 @@ class LabEnvironment(environment.Environment):
     self.proc.join()
     print("lab environment stopped")
     
-  def _preprocess_frame(self, image):
-    print(image)
+  def _preprocess_frame(self, image_withd):
+    depth_arr = image_withd[:,:,3:].reshape(-1)
+    image = image_withd[:,:,:3]
     image = image.astype(np.float32)
     image = image / 255.0
-    return image
+    for each in depth_arr:
+      print(each)
+    return (image, depth_arr)
 
   def process(self, action):
     real_action = LabEnvironment.ACTION_LIST[action]
@@ -111,12 +114,14 @@ class LabEnvironment(environment.Environment):
     obs, reward, terminal = self.conn.recv()
 
     if not terminal:
-      state = self._preprocess_frame(obs)
+      state, depths = self._preprocess_frame(obs)
     else:
       state = self.last_state
+      depths = self.last_depths
     
     pixel_change = self._calc_pixel_change(state, self.last_state)
     self.last_state = state
+    self.last_depths = depths
     self.last_action = action
     self.last_reward = reward
-    return state, reward, terminal, pixel_change
+    return state, reward, terminal, pixel_change, depths
