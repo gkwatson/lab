@@ -358,14 +358,15 @@ class Trainer(object):
     }
 
     # [Depth Prediction]
-    batch_depthr_states, batch_depthr_last_action_reward, batch_depthr_depths = self._process_depthr(sess)
+    if USE_DEPTH_PREDICTION:
+      batch_depthr_states, batch_depthr_last_action_reward, batch_depthr_depths = self._process_depthr(sess)
 
-    depth_feed_dict = {
+      depth_feed_dict = {
         self.local_network.depth_input: batch_depthr_states,
         self.local_network.depth_last_action_reward_input: batch_depthr_last_action_reward,
         self.local_network.depth_target: batch_depthr_depths
-    }
-    feed_dict.update(depth_feed_dict)
+      }
+      feed_dict.update(depth_feed_dict)
 
     # [Pixel change]
     if USE_PIXEL_CHANGE:

@@ -50,7 +50,8 @@ class UnrealModel(object):
       self._create_base_network()
 
       #Depth prediction network
-      self._create_depth_network()
+      if USE_DEPTH_PREDICTION:
+        self._create_depth_network()
 
       # [Pixel change network]
       if USE_PIXEL_CHANGE:
@@ -169,7 +170,7 @@ class UnrealModel(object):
       
       # Depth (output)
       d_ = tf.matmul(lstm_outputs, W_fc_d) + b_fc_d
-      depth_out = tf.reshape( d_, [-1] )
+      depth_out = tf.reshape( d_, [-1, 7056] )
       return depth_out
 
 
@@ -371,8 +372,9 @@ class UnrealModel(object):
     with tf.device(self._device):
       loss = self._base_loss()
 
-      depth_loss = self._depth_loss()
-      loss = loss + depth_loss
+      if USE_DEPTH_PREDICTION:
+        depth_loss = self._depth_loss()
+        loss = loss + depth_loss
       
       if USE_PIXEL_CHANGE:
         pc_loss = self._pc_loss()

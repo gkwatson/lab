@@ -50,7 +50,8 @@ class UnrealModel(object):
       self._create_base_network()
 
       #Depth prediction network
-      self._create_depth_network()
+      if USE_DEPTH_PREDICTION:
+        self._create_depth_network()
 
       # [Pixel change network]
       if USE_PIXEL_CHANGE:
@@ -95,7 +96,9 @@ class UnrealModel(object):
 
     self.base_pi = self._base_policy_layer(self.base_lstm_outputs) # policy output
     self.base_v  = self._base_value_layer(self.base_lstm_outputs)  # value output
-    self.depth_out  = self._depth_layer(self.base_lstm_outputs)  # depth output
+
+    if USE_DEPTH_PREDICTION:
+      self.depth_out  = self._depth_layer(self.base_lstm_outputs)  # depth output
 
     
   def _base_conv_layers(self, state_input, reuse=False):
@@ -371,8 +374,9 @@ class UnrealModel(object):
     with tf.device(self._device):
       loss = self._base_loss()
 
-      depth_loss = self._depth_loss()
-      loss = loss + depth_loss
+      if USE_DEPTH_PREDICTION:
+        depth_loss = self._depth_loss()
+        loss = loss + depth_loss
       
       if USE_PIXEL_CHANGE:
         pc_loss = self._pc_loss()
