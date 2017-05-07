@@ -1059,3 +1059,4 @@ py_test(
     main = "python/random_agent_test.py",
     deps = [":random_agent"],
 )
+package(default_visibility = ["//visibility:public"])
