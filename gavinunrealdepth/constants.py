@@ -24,13 +24,13 @@ ENTROPY_BETA = 0.001 # entropy regurarlization constant
 PIXEL_CHANGE_LAMBDA = 0.05 # 0.01 ~ 0.1 for Lab, 0.0001 ~ 0.01 for Gym
 EXPERIENCE_HISTORY_SIZE = 2000 # Experience replay buffer size
 
-USE_PIXEL_CHANGE      = True
-USE_VALUE_REPLAY      = True
-USE_REWARD_PREDICTION = True
+USE_PIXEL_CHANGE      = False
+USE_VALUE_REPLAY      = False
+USE_REWARD_PREDICTION = False
 USE_DEPTH_PREDICTION  = True
 
 MAX_TIME_STEP = 10 * 10**7
-SAVE_INTERVAL_STEP = 100 * 1000
+SAVE_INTERVAL_STEP = 100 * 100
 
 GRAD_NORM_CLIP = 40.0 # gradient norm clipping
 USE_GPU = True # To use GPU, set True

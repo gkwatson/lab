@@ -168,11 +168,11 @@ class UnrealModel(object):
   def _depth_layer(self, lstm_outputs, reuse=False):
     with tf.variable_scope("depth_layer", reuse=reuse) as scope:
       # Weight for value output layer
-      W_fc_d, b_fc_d = self._fc_variable([256, 7056], "depth_fc")
+      W_fc_d, b_fc_d = self._fc_variable([256, 8], "depth_fc")
       
       # Depth (output)
       d_ = tf.matmul(lstm_outputs, W_fc_d) + b_fc_d
-      depth_out = tf.reshape( d_, [-1, 7056] )
+      depth_out = tf.reshape( d_, [-1, 8] )
       return depth_out
 
 
@@ -363,7 +363,7 @@ class UnrealModel(object):
   
   def _depth_loss(self):
     # Depth actual values for frame (In 1D)
-    self.depth_target = tf.placeholder("float", [None, 7056])
+    self.depth_target = tf.placeholder("float", [None, 8])
     
     # Depth loss (output)
     depth_loss = tf.reduce_mean(tf.squared_difference(self.depth_out, self.depth_target))

@@ -159,8 +159,10 @@ class Display(object):
     """
     Show depth prediction image
     """
-    depth_preds_ = (255.0 - depth_preds * 255.0).astype(np.uint8)
-    data = depth_preds_.reshape(84, 84, 1)
+    depth_preds_ = (255.0 - np.log10(depth_preds) * 255.0).astype(np.uint8)
+    data = depth_preds_.reshape(1, 8, 1)
+    data = cv2.resize(data,(84, 84), interpolation=cv2.INTER_NEAREST)
+    data = data.reshape(84, 84, 1)
     data_ = np.append(data, data, axis=2)
     data_ = np.append(data_, data, axis=2)
     image = pygame.image.frombuffer(data_, (84,84), 'RGB')
@@ -171,8 +173,10 @@ class Display(object):
     """
     Show depth truth image
     """
-    depths_ = (255.0 - depths * 255.0).astype(np.uint8)
-    data = depths_.reshape(84, 84, 1)
+    depths_ = (255.0 - np.log10(depths) * 255.0).astype(np.uint8)
+    data = depths_.reshape(1, 8, 1)
+    data = cv2.resize(data,(84, 84), interpolation=cv2.INTER_NEAREST)
+    data = data.reshape(84, 84, 1)
     data_ = np.append(data, data, axis=2)
     data_ = np.append(data_, data, axis=2)
     image = pygame.image.frombuffer(data_, (84,84), 'RGB')

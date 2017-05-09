@@ -99,9 +99,17 @@ class LabEnvironment(environment.Environment):
     print("lab environment stopped")
     
   def _preprocess_frame(self, image_withd):
-    depth_arr = image_withd[:,:,3:].reshape(-1)
-    depth_arr = depth_arr.astype(np.float32)
-    depth_arr = depth_arr / 255.0
+    #get depth image
+    depth_arr = image_withd[:,:,3:].astype(np.float32)
+
+    #Resize and stretch upper values of distribution
+    depth_arr = cv2.resize(depth_arr,(1,8)).reshape(-1)
+    depth_arr = (depth_arr / 255.0) ** 10
+    bins = np.array([0.0, 0.05, 0.175, 0.3, 0.425, 0.55, 0.675, 0.8, 1.0])
+    inds = np.digitize(depth_arr, bins)
+    for i in range(depth_arr.size):
+      depth_arr[i] = bins[inds[i]-1]
+
     image = image_withd[:,:,:3]
     image = image.astype(np.float32)
     image = image / 255.0
